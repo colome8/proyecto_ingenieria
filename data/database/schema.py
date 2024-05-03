@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, create_engine, Float, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
-from data.database.Settings import SQLALCHEMY_DATABASE_URL
+from data.database.settings import SQLALCHEMY_DATABASE_URL
 Base = declarative_base()
 
 class FXTickData(Base):
