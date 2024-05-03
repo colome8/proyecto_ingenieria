@@ -6,6 +6,7 @@ import MetaTrader5 as mt5
 from sqlalchemy.orm import sessionmaker
 from data.database.schema import *
 
+#TODO: Object with the loop that gets realtime data and uses controller to insert the data, and get cached data
 
 class Feeder:
     def _init_(self):
