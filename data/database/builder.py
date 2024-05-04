@@ -1,12 +1,11 @@
 
 
 def main():
-    from schema import Base, engine
+    from data.database.schema import Base, engine
+    from data.database.migrations import migration_1
     Base.metadata.create_all(bind=engine)
-    from data.feeder.feeder import Feeder
-    from data.database.settings import pair
-    f=Feeder()
-    f.fast_feed_ticks_range(pair)
+    migration_1()
+
 
 if __name__== '__main__':
     main()

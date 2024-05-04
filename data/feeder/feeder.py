@@ -4,18 +4,21 @@ from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 import MetaTrader5 as mt5
 from sqlalchemy.orm import sessionmaker
-from data.database.schema import *
 
 #TODO: Object with the loop that gets realtime data and uses controller to insert the data, and get cached data
 
+
 class Feeder:
-    def _init_(self):
-        if not mt5.initialize():
+    def __init__(self):
+        self.mt5 = mt5
+        if not self.mt5.initialize():
             print("Failed to connect to MetaTrader 5!")
             quit()
-        self.mt5 = mt5
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+    def get_most(self, pair):
+        response = self.mt5.copy_ticks_from(pair, datetime.today()-timedelta(days=5),2**31-1, mt5.COPY_TICKS_ALL)
+        return [{'timestamp':datetime.fromtimestamp(tick[0]),'bid':tick[1], 'ask':tick[2]} for tick in response]
+"""
     def fast_feed_ticks_range(self, symbol, date_from: datetime = datetime.now() - timedelta(days=5),
                               date_to: datetime = datetime.now()):
         ticks = mt5.copy_ticks_range(symbol, date_from, date_to, mt5.COPY_TICKS_ALL)
@@ -63,8 +66,13 @@ class Feeder:
         self.feed_ticks_range(symbol, latest_date, motive=f"Updating ticks from {latest_date}",
                               disable_tqdm=disable_tqdm)
 
-
+"""
 
 def main():
     f = Feeder()
+    t=f.get_most("EURUSD")
+    print(len(t))
+    print(t[0],t[-1])
 
+if __name__ == '__main__':
+    main()
