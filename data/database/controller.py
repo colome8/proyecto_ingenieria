@@ -1,9 +1,9 @@
-import datetime
+from datetime import datetime
 
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
 from data.database.schema import FXTickData
-from data.database.settings import SQLALCHEMY_DATABASE_URL, pair
+from data.database import SQLALCHEMY_DATABASE_URL
 from sqlalchemy import create_engine, text, funcfilter, func, select, Integer, extract, cast, DateTime, String, and_
 
 
@@ -13,7 +13,7 @@ class TickDataController:
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
 
-    def add_ticks(self, ticks:list):
+    def add_ticks(self, ticks:list, pair:str):
         """
         Add a batch of tick data to the database.
 
@@ -30,12 +30,11 @@ class TickDataController:
     def close_session(self):
         self.session.close()
 
-    def get_from_sql(self, time_frame:int,start_datetime:datetime.datetime):
+    def get_from_sql(self, time_frame:int,start_datetime:float, pair:str):
         tf = time_frame
 
         subquery = select(
-            func.datetime(func.floor(func.extract('epoch', FXTickData.timestamp) / (60 * tf)) * 60 * tf,
-                          'unixepoch').label("time"),
+            (func.floor(FXTickData.timestamp / (60 * tf)) * 60 * tf).label("time"),
             FXTickData.ask,
             FXTickData.bid
         ).where(
@@ -60,20 +59,16 @@ class TickDataController:
                  func.max(query_a.c.ask),
                  func.min(query_a.c.bid),
                  (func.max(query_a.c.last_ask)+func.max(query_a.c.last_bid))/2).group_by(query_a.c.time)
-        t0=time()
         data = self.session.execute(query_b).fetchall()
-        t1=time()
-        print("sql fetch: ",t1-t0)
+
         df_out = pd.DataFrame(data, columns=['datetime', 'Open', 'High','Low','Close'])
         df_out.set_index('datetime', inplace=True)
-        df_out.index = pd.to_datetime(df_out.index)
         return df_out
 
-    def get_from_pd(self, time_frame:int,start_datetime:datetime.datetime):
+    def get_from_pd(self, time_frame:int,start_datetime:float, pair:str):
         tf = time_frame
         query = select(
-            func.datetime(func.floor(func.extract('epoch', FXTickData.timestamp) / (60 * tf)) * 60 * tf,
-                          'unixepoch').label("time"),
+            (func.floor(FXTickData.timestamp / (60 * tf)) * 60 * tf).label("time"),
             FXTickData.ask,
             FXTickData.bid
         ).where(
@@ -83,11 +78,7 @@ class TickDataController:
             )
         ).order_by(FXTickData.timestamp)
 
-        t0=time()
         data = self.session.execute(query).fetchall()
-        t1 = time()
-        print("pd fetch: ",t1 - t0)
-
         # Convert the result to a DataFrame
         df = pd.DataFrame(data, columns=['datetime', 'ask', 'bid'])
 
@@ -105,24 +96,33 @@ class TickDataController:
             'Low': grouped_data[('bid', 'min')],
             'Close': (grouped_data[('ask', 'last')] + grouped_data[('bid', 'last')]) / 2
         })
-        df_out.index = pd.to_datetime(grouped_data.index)
 
         return df_out
 
-    def get_from(self, time_frame:int,start_datetime:datetime.datetime):
-        return self.get_from_pd(time_frame, start_datetime)
+    def get_from(self, time_frame:int,start_datetime:float, pair:str):
+        return self.get_from_pd(time_frame, start_datetime, pair)
+
+    def get_last_date(self, pair):
+        last_date = (
+            self.session.query(func.max(FXTickData.timestamp))
+            .filter(FXTickData.currency_pair == pair)
+            .scalar()
+        )
+        return last_date
+
 
 
 if __name__ == '__main__':
     from time import time
     tick_data_controller = TickDataController()
-    d=datetime.datetime(2024,4,28,23)
-    tf=60
+    d=datetime(2024,4,28,23).timestamp()
+    tf=5
+    pair = "EURUSD"
 
     t0=time()
-    c1 = tick_data_controller.get_from_pd(tf,d)
+    c1 = tick_data_controller.get_from_pd(tf,d,pair)
     t1=time()
-    c2 = tick_data_controller.get_from_sql(tf,d)
+    c2 = tick_data_controller.get_from_sql(tf,d, pair)
     t2=time()
 
     print(c1)
@@ -130,3 +130,4 @@ if __name__ == '__main__':
     print(all(c1==c2))
     print("pd fun: ",t1-t0)
     print("sql fun: ",t2-t1)
+    print((tick_data_controller.get_last_date(pair)))

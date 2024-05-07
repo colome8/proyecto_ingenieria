@@ -4,13 +4,13 @@ import time
 
 
 class Feeder:
-    def __init__(self, pair:str, cache_size:int = 100):
+    def __init__(self, pair:str, start_date:float = (datetime.today() - timedelta(days=5)).timestamp()):
         self.mt5 = mt5
         if not self.mt5.initialize():
             print("Failed to connect to MetaTrader 5!")
             quit()
         self.pair = pair
-        self.last_tick = {'timestamp': datetime.today() - timedelta(days=5)}
+        self.last_tick = {'timestamp': start_date}
 
     def connect(self):
         if not self.mt5.initialize():
@@ -18,7 +18,7 @@ class Feeder:
 
     @staticmethod
     def parse(response):
-        return [{'timestamp':datetime.fromtimestamp(tick[0]),'bid':tick[1], 'ask':tick[2]} for tick in response]
+        return [{'timestamp':tick[5]/1000,'bid':tick[1], 'ask':tick[2]} for tick in response]
         
 
     def get_ticks(self):
