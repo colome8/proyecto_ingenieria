@@ -23,7 +23,7 @@ async def send_data(websocket: WebSocket, pair: str, timeframe: int):
         feeder = Feeder(pair, last_date)
 
     # Send initial data to the client
-    #await websocket.send_json(controller.get_from(timeframe, (datetime.now() - timedelta(minutes=timeframe*20)).timestamp(), pair).to_json())
+    await websocket.send_json(controller.get_from(timeframe, (datetime.now() - timedelta(minutes=timeframe*20)).timestamp(), pair).to_json())
 
     # Set up caching
     cache_size = 32
