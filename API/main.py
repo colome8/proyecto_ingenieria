@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime, timedelta
 
 from fastapi import FastAPI, WebSocket
@@ -9,6 +10,7 @@ from data.feeder.feeder import Feeder
 
 from data.database.schema import Base, engine
 app = FastAPI()
+
 @app.websocket("/ws/{pair}/{timeframe}")
 async def send_data(websocket: WebSocket, pair: str, timeframe: int):
     await websocket.accept()
@@ -23,7 +25,9 @@ async def send_data(websocket: WebSocket, pair: str, timeframe: int):
         feeder = Feeder(pair, last_date)
 
     # Send initial data to the client
-    await websocket.send_json(controller.get_from(timeframe, (datetime.now() - timedelta(minutes=timeframe*20)).timestamp(), pair).to_json())
+    time = datetime(2024,4,29).timestamp()
+    initial_data = controller.get_from(timeframe, time, pair)
+    await websocket.send_json(initial_data.to_json())
 
     # Set up caching
     cache_size = 32
@@ -35,7 +39,7 @@ async def send_data(websocket: WebSocket, pair: str, timeframe: int):
         if new_ticks:
             cache += new_ticks
             for tick in new_ticks:
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.005)
                 await websocket.send_json(tick)
         if len(cache) >= cache_size:
             # Add cached ticks to the database

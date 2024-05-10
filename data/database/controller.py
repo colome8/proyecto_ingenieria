@@ -100,7 +100,7 @@ class TickDataController:
         return df_out
 
     def get_from(self, time_frame:int,start_datetime:float, pair:str):
-        return self.get_from_pd(time_frame, start_datetime, pair)
+        return self.get_from_sql(time_frame, start_datetime, pair)
 
     def get_last_date(self, pair):
         last_date = (

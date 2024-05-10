@@ -13,6 +13,7 @@ class Feeder:
         self.last_tick = {'timestamp': start_date}
 
     def connect(self):
+        print("Connecting to MetaTrader...")
         if not self.mt5.initialize():
             print("Failed to connect to MetaTrader 5!")
 
